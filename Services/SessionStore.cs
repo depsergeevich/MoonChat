@@ -82,6 +82,23 @@ public sealed class SessionStore
 
         Changed?.Invoke();
     }
+
+    /// <summary>
+    /// Throws away any session already loaded into memory but leaves the cache
+    /// file alone.
+    ///
+    /// Used when another instance owns the session: the cached token is still
+    /// that window's to restore, and deleting the file would sign the owner out
+    /// the next time it restarts.
+    /// </summary>
+    public void DiscardRestored()
+    {
+        Token = "";
+        User = null;
+        LastConversationId = null;
+        Changed?.Invoke();
+    }
+
     public async Task SaveAsync(string token, User user)
     {
         await _gate.WaitAsync();

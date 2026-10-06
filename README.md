@@ -29,6 +29,7 @@ browser engine anywhere in the app.
 - **Live updates** — new messages, typing indicators, presence and read receipts arrive over a websocket
 - **Unread counts** — per conversation and summed in the sidebar
 - **Resilient** — reconnects with exponential backoff and resyncs anything missed while offline
+- **One signed-in window** — a second instance starts signed out and says why, instead of quietly sharing the first one's session
 - **Calm interface** — dark theme, grouped messages, Enter to send and Shift+Enter for a newline
 
 ## Tech stack
@@ -112,6 +113,11 @@ Websocket frames use one envelope, `{ "type", "id"?, "payload"? }`:
   fetches exactly what was missed.
 - **The thread follows new messages** only when the newest one is what changed,
   so scrolling back through history is not yanked to the bottom.
+- **Only the first instance restores the session.** It takes a named
+  `Local\MoonChat.Session` lock; a window that finds the lock held comes up
+  signed out with a notice, and leaves the owner's cached session untouched. If
+  the first window is killed the lock dies with it, so the next launch restores
+  normally with no stale state to clean up.
 
 ## Project layout
 
@@ -120,7 +126,7 @@ client/
 ├── Views/          MainWindow, LoginView, ChatView
 ├── Controls/       AvatarView
 ├── ViewModels/     shell, login, chat, message rows, RelayCommand
-├── Services/       ApiClient, ChatState (realtime), SessionStore, AvatarCache
+├── Services/       ApiClient, ChatState (realtime), SessionStore, AvatarCache, SingleSessionGuard
 ├── Converters/     value converters
 ├── Models/         DTOs mirroring the server contract
 └── App.axaml       palette and control styles

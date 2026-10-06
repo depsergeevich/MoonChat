@@ -23,6 +23,11 @@ public partial class App : Application
     {
         var services = new ServiceCollection();
 
+        // Taken before anything touches the session: the first window up owns the
+        // cached session, any later one starts signed out.
+        var guard = SingleSessionGuard.TryAcquire();
+        services.AddSingleton(guard);
+
         // AuthHandler reads the session, so the HttpClient is built by hand
         // rather than through AddHttpClient.
         services.AddSingleton(provider => new HttpClient(
@@ -50,13 +55,25 @@ public partial class App : Application
         // Restore before the first window shows, otherwise a returning user
         // would briefly see the sign-in screen.
         var session = provider.GetRequiredService<SessionStore>();
-        session.Restore();
-        log.Info($"session restored: signedIn={session.IsSignedIn}");
+        if (guard.IsOwner)
+        {
+            session.Restore();
+        }
+        else
+        {
+            // Another window already holds the session. Drop whatever was cached
+            // without deleting the file: it still belongs to that window, and
+            // deleting it would sign the owner out on its next restart.
+            session.DiscardRestored();
+        }
+
+        log.Info($"session guard: owner={guard.IsOwner}; signedIn={session.IsSignedIn}");
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             var shell = provider.GetRequiredService<MainWindowViewModel>();
             desktop.MainWindow = new MainWindow { DataContext = shell };
+            desktop.Exit += (_, _) => guard.Dispose();
             log.Info($"main window assigned: {desktop.MainWindow?.GetType().Name}");
         }
         else

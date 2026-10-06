@@ -20,15 +20,35 @@ public sealed class LoginViewModel : ViewModelBase
     private bool _busy;
     private string? _error;
 
-    public LoginViewModel(ApiClient api, SessionStore session, IDiagnostics log)
+    public LoginViewModel(
+        ApiClient api,
+        SessionStore session,
+        IDiagnostics log,
+        SingleSessionGuard guard)
     {
         _api = api;
         _session = session;
         _log = log;
 
+        // This window did not get to restore the cached session because another
+        // one already owns it. Say so, otherwise an unexplained sign-in screen
+        // looks like the login was simply forgotten.
+        if (!guard.IsOwner)
+        {
+            SessionNotice =
+                "Another MoonChat window is already open, so this one started signed out. " +
+                "Close that window and sign in here.";
+        }
+
         SignInCommand = new RelayCommand(_ => SubmitAsync(), _ => CanSubmit);
         ToggleModeCommand = new RelayCommand(_ => ToggleMode());
     }
+
+    /// <summary>
+    /// Explains why this window started signed out despite a cached session.
+    /// Null in the ordinary case.
+    /// </summary>
+    public string? SessionNotice { get; }
 
     /// <summary>Raised after a successful sign-in or registration.</summary>
     public Func<Task>? SignedIn { get; set; }
