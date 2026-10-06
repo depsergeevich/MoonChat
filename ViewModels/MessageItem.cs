@@ -1,3 +1,4 @@
+using Avalonia.Layout;
 using MoonChat.Client.Models;
 
 namespace MoonChat.Client.ViewModels;
@@ -31,6 +32,13 @@ public sealed class MessageItem : ViewModelBase
     public string Body => Message.Body;
 
     public string Time => Message.Timestamp.ToLocalTime().ToString("HH:mm");
+
+    /// <summary>
+    /// Own messages sit on the right, everything else on the left. Exposed as
+    /// an alignment so the view needs no triggers.
+    /// </summary>
+    public HorizontalAlignment BubbleAlignment =>
+        IsMine ? HorizontalAlignment.Right : HorizontalAlignment.Left;
 
     public string SenderName => Message.SenderName;
 

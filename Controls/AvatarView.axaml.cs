@@ -27,7 +27,11 @@ public partial class AvatarView : UserControl
     private AvatarCache? _cache;
     private string? _loadedUrl;
 
-    public AvatarView() => InitializeComponent();
+    public AvatarView()
+    {
+        InitializeComponent();
+        ApplySize();
+    }
 
     /// <summary>Set by the view so the control can fetch avatars on demand.</summary>
     public AvatarCache? Cache
@@ -88,10 +92,7 @@ public partial class AvatarView : UserControl
 
         if (change.Property == DiameterProperty)
         {
-            Width = Diameter;
-            Height = Diameter;
-            ClipBorder.SetValue(CornerRadiusProperty, new CornerRadius(Diameter / 2));
-            InitialText.FontSize = Math.Max(11, Diameter * 0.38);
+            ApplySize();
         }
 
         if (change.Property == DisplayNameProperty || change.Property == UserIdProperty)
@@ -104,6 +105,21 @@ public partial class AvatarView : UserControl
         {
             _ = UpdateAsync();
         }
+    }
+
+    /// <summary>
+    /// Sizes the control and rounds the clip. Values set from XAML arrive after
+    /// the constructor, so this runs both there and on every change.
+    /// </summary>
+    private void ApplySize()
+    {
+        var size = Math.Max(1, Diameter);
+
+        Width = size;
+        Height = size;
+        InitialText.FontSize = Math.Max(10, size * 0.38);
+
+        ClipBorder.SetValue(Border.CornerRadiusProperty, new CornerRadius(size / 2));
     }
 
     private string Initial =>

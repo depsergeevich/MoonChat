@@ -12,17 +12,10 @@
         Background="{StaticResource SurfaceBrush}">
 
   <Panel>
-    <!-- Boot splash, shown only while the stored session is being read. -->
-    <TextBlock Text="Starting MoonChat…"
-               Foreground="{StaticResource MutedBrush}"
-               HorizontalAlignment="Center"
-               VerticalAlignment="Center"
-               IsVisible="{Binding IsStarting}" />
-
     <!--
       Each view is wrapped in a Grid that keeps the shell's DataContext, so the
-      visibility flag can be bound there while the view itself gets the
-      view model it needs.
+      visibility flag can be bound there while the view itself gets the view
+      model it needs.
     -->
     <Grid DataContext="{Binding}" IsVisible="{Binding ShowLogin}">
       <views:LoginView DataContext="{Binding Login}" />

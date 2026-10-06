@@ -14,7 +14,6 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
     private readonly IDiagnostics _log;
 
     private bool _isAuthenticated;
-    private bool _starting = true;
 
     public MainWindowViewModel(
         ChatState chat,
@@ -47,26 +46,18 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
         private set => SetProperty(ref _isAuthenticated, value);
     }
 
-    /// <summary>Hides the shell until the stored session has been read.</summary>
-    public bool IsStarting
-    {
-        get => _starting;
-        private set => SetProperty(ref _starting, value);
-    }
+    public bool ShowLogin => !IsAuthenticated;
 
-    public bool ShowLogin => !IsStarting && !IsAuthenticated;
+    public bool ShowChat => IsAuthenticated;
 
-    public bool ShowChat => !IsStarting && IsAuthenticated;
-
+    /// <summary>
+    /// Called once the window opens. The stored session is already read by
+    /// this point, so a returning user goes straight into the chat shell.
+    /// </summary>
     public void Start()
     {
-        IsStarting = false;
-        OnPropertiesChanged(nameof(ShowLogin), nameof(ShowChat));
-
         if (IsAuthenticated)
         {
-            // A returning user goes straight into the app, so the session load
-            // has to be kicked off here as well as after a sign-in.
             _ = StartChatAsync();
         }
     }

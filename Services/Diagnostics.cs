@@ -43,21 +43,7 @@ public sealed class DiagnosticLog : IDiagnostics
 
     public void Log(string level, string message)
     {
-        var line = $"{DateTime.Now:HH:mm:ss.fff} [{level}] {message}";
-        System.Diagnostics.Debug.WriteLine(line);
-
-        if (_filePath is null)
-        {
-            return;
-        }
-
-        try
-        {
-            File.AppendAllText(_filePath, line + Environment.NewLine);
-        }
-        catch (Exception)
-        {
-            // Logging must never be the thing that breaks the app.
-        }
+        // Goes through Trace, which the app points at MOONCHAT_DEBUG_LOG.
+        System.Diagnostics.Trace.WriteLine($"[{level}] {message}");
     }
 }

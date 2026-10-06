@@ -91,12 +91,19 @@ public sealed class ChatViewModel : ViewModelBase, IDisposable
         {
             if (SetProperty(ref _activeConversation, value))
             {
-                OnPropertiesChanged(nameof(HasActiveConversation), nameof(PeerName), nameof(PeerUsername));
+                OnPropertiesChanged(
+                    nameof(HasActiveConversation),
+                    nameof(ActiveConversationId),
+                    nameof(PeerName),
+                    nameof(PeerUsername));
             }
         }
     }
 
     public bool HasActiveConversation => ActiveConversation is not null;
+
+    /// <summary>Id of the open thread, or 0. Used to mark the selected row.</summary>
+    public long ActiveConversationId => ActiveConversation?.Id ?? 0;
 
     public string PeerName => ActiveConversation?.Peer.DisplayName ?? "";
 
@@ -134,8 +141,6 @@ public sealed class ChatViewModel : ViewModelBase, IDisposable
             return total;
         }
     }
-
-    public bool HasUnread => TotalUnread > 0;
 
     public string ConnectionStatus
     {
@@ -229,46 +234,6 @@ public sealed class ChatViewModel : ViewModelBase, IDisposable
     /// Two-way bound to the conversation list so selecting a row is what opens
     /// the thread. Setting it to null while refreshing is ignored.
     /// </summary>
-    public Conversation? SelectedConversation
-    {
-        get => _selectedConversation;
-        set
-        {
-            if (ReferenceEquals(_selectedConversation, value))
-            {
-                return;
-            }
-
-            _selectedConversation = value;
-            if (value is not null)
-            {
-                _ = OpenConversationAsync(value);
-            }
-        }
-    }
-
-    private Conversation? _selectedConversation;
-
-    /// <summary>Two-way bound to the contacts list; selecting starts a thread.</summary>
-    public Contact? SelectedContact
-    {
-        get => _selectedContact;
-        set
-        {
-            if (ReferenceEquals(_selectedContact, value))
-            {
-                return;
-            }
-
-            _selectedContact = value;
-            if (value is not null)
-            {
-                _ = StartConversationAsync(value);
-            }
-        }
-    }
-
-    private Contact? _selectedContact;
 
     private void OnStateChanged() => SyncAll();
 
@@ -288,7 +253,6 @@ public sealed class ChatViewModel : ViewModelBase, IDisposable
             nameof(MeAvatarUrl),
             nameof(MeId),
             nameof(TotalUnread),
-            nameof(HasUnread),
             nameof(IsConnected),
             nameof(IsConnecting),
             nameof(HasMoreHistory),
@@ -304,13 +268,6 @@ public sealed class ChatViewModel : ViewModelBase, IDisposable
             RealtimeStatus.Connecting => "Connecting…",
             _ => "Offline",
         };
-
-        // Keep the list selection in step with the open thread.
-        if (!ReferenceEquals(_selectedConversation, _state.ActiveConversation))
-        {
-            _selectedConversation = _state.ActiveConversation;
-            OnPropertyChanged(nameof(SelectedConversation));
-        }
 
         ActiveConversation = _state.ActiveConversation;
         PeerTyping = _state.PeerTypingIn is not null;
@@ -395,7 +352,6 @@ public sealed class ChatViewModel : ViewModelBase, IDisposable
         {
             await _state.StartConversationAsync(contact.Id);
             ShowContacts = false;
-            SelectedContact = null;
         }
         catch (ApiException ex)
         {

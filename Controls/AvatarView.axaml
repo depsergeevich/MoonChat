@@ -2,20 +2,18 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="MoonChat.Client.Controls.AvatarView">
 
-  <Panel ClipToBounds="True">
-    <Border x:Name="ClipBorder" Background="Transparent">
-      <Panel>
-        <Border x:Name="InitialBlock" Background="#5B8DEF">
-          <TextBlock x:Name="InitialText"
-                     Text="?"
-                     Foreground="White"
-                     FontWeight="SemiBold"
-                     HorizontalAlignment="Center"
-                     VerticalAlignment="Center" />
-        </Border>
+  <Border x:Name="ClipBorder" Background="Transparent" ClipToBounds="True">
+    <Panel>
+      <Border x:Name="InitialBlock" Background="#5B8DEF">
+        <TextBlock x:Name="InitialText"
+                   Text="?"
+                   Foreground="White"
+                   FontWeight="SemiBold"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center" />
+      </Border>
 
-        <Image x:Name="PhotoImage" Stretch="UniformToFill" IsVisible="False" />
-      </Panel>
-    </Border>
-  </Panel>
+      <Image x:Name="PhotoImage" Stretch="UniformToFill" IsVisible="False" />
+    </Panel>
+  </Border>
 </UserControl>

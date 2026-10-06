@@ -44,10 +44,16 @@ public sealed class SessionStore
 
     public event Action? Changed;
 
-    /// <summary>Reads a previously saved session, if any.</summary>
-    public async Task RestoreAsync()
+    /// <summary>
+    /// Reads a previously saved session, if any.
+    ///
+    /// Deliberately synchronous: this runs during start-up before Avalonia's
+    /// message loop is pumping, and awaiting here would deadlock because the
+    /// continuation posts to a UI SynchronizationContext nothing is servicing.
+    /// The file is a few hundred bytes of local JSON.
+    /// </summary>
+    public void Restore()
     {
-        await _gate.WaitAsync();
         try
         {
             if (!File.Exists(_path))
@@ -55,7 +61,7 @@ public sealed class SessionStore
                 return;
             }
 
-            var json = await File.ReadAllTextAsync(_path);
+            var json = File.ReadAllText(_path);
             var saved = JsonSerializer.Deserialize<SavedSession>(json, CacheOptions);
             if (saved is null || string.IsNullOrEmpty(saved.Token))
             {
@@ -69,15 +75,13 @@ public sealed class SessionStore
         catch (Exception)
         {
             // A corrupt or unreadable cache should never block startup.
-        }
-        finally
-        {
-            _gate.Release();
+            Token = "";
+            User = null;
+            LastConversationId = null;
         }
 
         Changed?.Invoke();
     }
-
     public async Task SaveAsync(string token, User user)
     {
         await _gate.WaitAsync();

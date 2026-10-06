@@ -54,7 +54,8 @@
                   Command="{Binding ShowChatsCommand}">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <TextBlock Text="Chats" />
-              <Border Classes="pill" IsVisible="{Binding HasUnread}">
+              <Border Classes="pill"
+                      IsVisible="{Binding TotalUnread, Converter={x:Static converters:PositiveToBoolConverter.Instance}}">
                 <TextBlock Text="{Binding TotalUnread}" Foreground="White" FontSize="11" FontWeight="Bold" />
               </Border>
             </StackPanel>
@@ -85,13 +86,19 @@
 
           <!-- conversations -->
           <Grid IsVisible="{Binding ShowChatsTab}">
-            <ListBox Classes="plain"
-                     ItemsSource="{Binding Conversations}"
-                     SelectionMode="Single"
-                     SelectedItem="{Binding $parent[UserControl].((vm:ChatViewModel)DataContext).SelectedConversation, Mode=TwoWay}">
-              <ListBox.ItemTemplate>
+            <ItemsControl ItemsSource="{Binding Conversations}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <VirtualizingStackPanel Orientation="Vertical" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+
+              <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="models:Conversation">
-                  <Border Classes="row" Classes.selected="{Binding $parent[ListBoxItem].IsSelected}">
+                  <Button Classes="rowsex"
+                          Classes.selected="{Binding $parent[ItemsControl].DataContext.ActiveConversationId, Converter={x:Static converters:LongToBoolConverter.Instance}, ConverterParameter=Id}"
+                          Command="{Binding $parent[ItemsControl].DataContext.OpenConversationCommand}"
+                          CommandParameter="{Binding}">
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="11">
                       <controls:AvatarView Grid.Column="0"
                                            Diameter="46"
@@ -117,7 +124,7 @@
                                      TextTrimming="CharacterEllipsis" />
                           <Border Grid.Column="1"
                                   Classes="pill"
-                                  IsVisible="{Binding UnreadCount, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                  IsVisible="{Binding UnreadCount, Converter={x:Static converters:PositiveToBoolConverter.Instance}}">
                             <TextBlock Text="{Binding UnreadCount}"
                                        Foreground="White"
                                        FontSize="11"
@@ -126,10 +133,10 @@
                         </Grid>
                       </Grid>
                     </Grid>
-                  </Border>
+                  </Button>
                 </DataTemplate>
-              </ListBox.ItemTemplate>
-            </ListBox>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
 
             <StackPanel VerticalAlignment="Center"
                         HorizontalAlignment="Center"
@@ -149,14 +156,18 @@
                       Command="{Binding AddContactCommand}" />
             </Grid>
 
-            <ListBox Grid.Row="1"
-                     Classes="plain"
-                     ItemsSource="{Binding Contacts}"
-                     SelectionMode="Single"
-                     SelectedItem="{Binding $parent[UserControl].((vm:ChatViewModel)DataContext).SelectedContact, Mode=TwoWay}">
-              <ListBox.ItemTemplate>
+            <ItemsControl Grid.Row="1" ItemsSource="{Binding Contacts}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <VirtualizingStackPanel Orientation="Vertical" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+
+              <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="models:Contact">
-                  <Border Classes="row" Classes.selected="{Binding $parent[ListBoxItem].IsSelected}">
+                  <Button Classes="rowsex"
+                          Command="{Binding $parent[ItemsControl].DataContext.StartConversationCommand}"
+                          CommandParameter="{Binding}">
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="11">
                       <Panel Grid.Column="0" Width="46" Height="46">
                         <controls:AvatarView Diameter="46"
@@ -178,10 +189,10 @@
                         <TextBlock Text="{Binding Username, StringFormat='@{0}'}" Classes="muted" />
                       </Grid>
                     </Grid>
-                  </Border>
+                  </Button>
                 </DataTemplate>
-              </ListBox.ItemTemplate>
-            </ListBox>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
 
             <TextBlock Grid.Row="1"
                        Classes="muted"
@@ -217,23 +228,25 @@
         </Border>
 
         <!-- messages -->
-        <Grid Grid.Row="1">
-          <ListBox Classes="plain"
-                   ItemsSource="{Binding Messages}"
-                   SelectionMode="Single"
-                   ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-            <ListBox.ItemsPanel>
-              <ItemsPanelTemplate>
-                <VirtualizingStackPanel Orientation="Vertical" />
-              </ItemsPanelTemplate>
-            </ListBox.ItemsPanel>
+        <Grid Grid.Row="1" RowDefinitions="Auto,*">
+          <!--
+              A ScrollViewer plus ItemsControl keeps full control of the row
+              markup; ListBox would bring its own selection chrome with it.
+            -->
+          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding Messages}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <VirtualizingStackPanel Orientation="Vertical" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
 
-            <ListBox.ItemTemplate>
+              <ItemsControl.ItemTemplate>
               <DataTemplate DataType="vm:MessageItem">
                 <!--
-                  The first column always occupies avatar width: grouped
-                  messages hide the avatar but keep a spacer so the bubbles
-                  stay aligned down the thread.
+                  Column 0 always reserves avatar width: grouped messages hide
+                  the avatar but keep the slot so bubbles stay aligned. The
+                  bubble hugs its text, with the timestamp right beside it.
                 -->
                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="0,1">
                   <Panel Grid.Column="0" Width="28" VerticalAlignment="Bottom">
@@ -244,50 +257,54 @@
                                          IsVisible="{Binding ShowHeader}" />
                   </Panel>
 
-                  <StackPanel Grid.Column="1" MaxWidth="560" Spacing="3" Classes.mine="{Binding IsMine}">
-                    <TextBlock Text="{Binding SenderName}"
-                               FontSize="11"
-                               Classes="muted"
-                               Margin="12,0,0,0"
-                               IsVisible="{Binding ShowHeader}" />
+                  <Grid Grid.Column="1" ColumnDefinitions="Auto,Auto" ColumnSpacing="8">
+                    <StackPanel Grid.Column="0" Spacing="3" MaxWidth="560">
+                      <TextBlock Text="{Binding SenderName}"
+                                 FontSize="11"
+                                 Classes="muted"
+                                 Margin="12,0,0,0"
+                                 IsVisible="{Binding ShowHeader}" />
 
-                    <Border Classes="bubble" Classes.mine="{Binding IsMine}">
-                      <TextBlock Text="{Binding Body}" TextWrapping="Wrap" MaxWidth="520" />
-                    </Border>
-                  </StackPanel>
+                      <Border Classes="bubble"
+                              Classes.mine="{Binding IsMine}"
+                              HorizontalAlignment="{Binding BubbleAlignment}">
+                        <TextBlock Text="{Binding Body}" TextWrapping="Wrap" />
+                      </Border>
+                    </StackPanel>
 
-                  <TextBlock Grid.Column="2"
-                             Classes="caption"
-                             FontSize="10"
-                             VerticalAlignment="Bottom"
-                             Margin="8,0,0,4"
-                             Text="{Binding Time}" />
+                    <TextBlock Grid.Column="1"
+                               Classes="caption"
+                               FontSize="10"
+                               VerticalAlignment="Bottom"
+                               Text="{Binding Time}" />
+                  </Grid>
                 </Grid>
               </DataTemplate>
-            </ListBox.ItemTemplate>
-          </ListBox>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
 
           <!-- pending sends, appended after persisted messages -->
-          <ListBox Classes="plain"
-                   ItemsSource="{Binding Pending}"
-                   IsHitTestVisible="False"
-                   VerticalAlignment="Bottom"
-                   Margin="0,0,0,4">
-            <ListBox.ItemTemplate>
+          <ItemsControl ItemsSource="{Binding Pending}"
+                        IsHitTestVisible="False"
+                        VerticalAlignment="Bottom"
+                        Margin="0,0,0,4">
+            <ItemsControl.ItemTemplate>
               <DataTemplate DataType="vm:PendingItem">
-                <Grid ColumnDefinitions="Auto,Auto,Auto">
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
                   <Border Grid.Column="0" Width="28" />
-                  <StackPanel Grid.Column="1" MaxWidth="560" Spacing="3" HorizontalAlignment="Right">
-                    <Border Classes="bubble mine pending">
-                      <TextBlock Text="{Binding Body}" TextWrapping="Wrap" MaxWidth="520" />
+                  <Grid Grid.Column="1" ColumnDefinitions="Auto,Auto" ColumnSpacing="8"
+                        HorizontalAlignment="Right">
+                    <Border Grid.Column="0" Classes="bubble mine pending">
+                      <TextBlock Text="{Binding Body}" TextWrapping="Wrap" />
                     </Border>
-                  </StackPanel>
-                  <TextBlock Grid.Column="2" Classes="caption" FontSize="10" Margin="8,0,0,4"
-                             VerticalAlignment="Bottom" Text="{Binding Time}" />
+                    <TextBlock Grid.Column="1" Classes="caption" FontSize="10"
+                               VerticalAlignment="Bottom" Text="{Binding Time}" />
+                  </Grid>
                 </Grid>
               </DataTemplate>
-            </ListBox.ItemTemplate>
-          </ListBox>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
 
           <TextBlock Classes="muted"
                      Text="No messages yet. Say hello."
@@ -295,10 +312,10 @@
                      VerticalAlignment="Center"
                      IsVisible="{Binding !HasMessages}" />
 
-          <Button Classes="link"
+          <Button Grid.Row="0"
+                  Classes="link"
                   HorizontalAlignment="Center"
-                  VerticalAlignment="Top"
-                  Margin="0,10,0,0"
+                  Margin="0,4,0,0"
                   Content="Load earlier messages"
                   Command="{Binding LoadOlderCommand}"
                   IsVisible="{Binding HasMoreHistory}" />

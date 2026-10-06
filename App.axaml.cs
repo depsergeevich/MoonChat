@@ -44,14 +44,24 @@ public partial class App : Application
         var provider = services.BuildServiceProvider();
         Services = provider;
 
+        var log = provider.GetRequiredService<IDiagnostics>();
+        log.Info($"Avalonia lifetime: {ApplicationLifetime?.GetType().Name ?? "(none)"}");
+
         // Restore before the first window shows, otherwise a returning user
         // would briefly see the sign-in screen.
-        provider.GetRequiredService<SessionStore>().RestoreAsync().GetAwaiter().GetResult();
+        var session = provider.GetRequiredService<SessionStore>();
+        session.Restore();
+        log.Info($"session restored: signedIn={session.IsSignedIn}");
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             var shell = provider.GetRequiredService<MainWindowViewModel>();
             desktop.MainWindow = new MainWindow { DataContext = shell };
+            log.Info($"main window assigned: {desktop.MainWindow?.GetType().Name}");
+        }
+        else
+        {
+            log.Error("ApplicationLifetime is not a desktop lifetime; no window will be shown");
         }
 
         base.OnFrameworkInitializationCompleted();
