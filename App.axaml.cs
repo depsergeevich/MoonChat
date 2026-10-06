@@ -67,6 +67,18 @@ public partial class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    /// <summary>Address of the MoonChat server.</summary>
-    private const string ApiBaseAddress = "http://127.0.0.1:8080/";
+    /// <summary>
+    /// Address of the MoonChat server. Overridable with MOONCHAT_API_BASE so a
+    /// client can be pointed at a different host or port without a rebuild.
+    /// </summary>
+    private static string ApiBaseAddress
+    {
+        get
+        {
+            var configured = Environment.GetEnvironmentVariable("MOONCHAT_API_BASE");
+            return string.IsNullOrWhiteSpace(configured)
+                ? "http://127.0.0.1:8080/"
+                : configured.TrimEnd('/') + "/";
+        }
+    }
 }
