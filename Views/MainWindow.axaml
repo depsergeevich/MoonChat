@@ -1,0 +1,35 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:MoonChat.Client.ViewModels"
+        xmlns:views="using:MoonChat.Client.Views"
+        x:Class="MoonChat.Client.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="MoonChat"
+        Width="1180"
+        Height="760"
+        MinWidth="920"
+        MinHeight="640"
+        Background="{StaticResource SurfaceBrush}">
+
+  <Panel>
+    <!-- Boot splash, shown only while the stored session is being read. -->
+    <TextBlock Text="Starting MoonChat…"
+               Foreground="{StaticResource MutedBrush}"
+               HorizontalAlignment="Center"
+               VerticalAlignment="Center"
+               IsVisible="{Binding IsStarting}" />
+
+    <!--
+      Each view is wrapped in a Grid that keeps the shell's DataContext, so the
+      visibility flag can be bound there while the view itself gets the
+      view model it needs.
+    -->
+    <Grid DataContext="{Binding}" IsVisible="{Binding ShowLogin}">
+      <views:LoginView DataContext="{Binding Login}" />
+    </Grid>
+
+    <Grid DataContext="{Binding}" IsVisible="{Binding ShowChat}">
+      <views:ChatView DataContext="{Binding Chat}" />
+    </Grid>
+  </Panel>
+</Window>

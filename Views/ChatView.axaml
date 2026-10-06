@@ -1,0 +1,361 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MoonChat.Client.ViewModels"
+             xmlns:controls="using:MoonChat.Client.Controls"
+             xmlns:converters="using:MoonChat.Client.Converters"
+             xmlns:models="using:MoonChat.Client.Models"
+             x:Class="MoonChat.Client.Views.ChatView"
+             x:DataType="vm:ChatViewModel">
+
+  <Grid ColumnDefinitions="320,*">
+
+    <!-- ================= sidebar ================= -->
+    <Border Grid.Column="0"
+            Background="{StaticResource ElevatedBrush}"
+            BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="0,0,1,0">
+      <Grid RowDefinitions="Auto,Auto,Auto,*">
+
+        <!-- identity + connection -->
+        <Grid Grid.Row="0" Margin="14,14,14,10" ColumnDefinitions="Auto,*,Auto">
+          <controls:AvatarView Grid.Column="0"
+                               Diameter="40"
+                               DisplayName="{Binding MeName}"
+                               AvatarUrl="{Binding MeAvatarUrl}"
+                               UserId="{Binding MeId}" />
+
+          <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Spacing="1">
+            <TextBlock Text="{Binding MeName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+            <TextBlock Classes="caption" Text="{Binding MeUsername, StringFormat='@{0}'}" />
+          </StackPanel>
+
+          <Button Grid.Column="2" Classes="icon" Command="{Binding SignOutCommand}" ToolTip.Tip="Sign out">
+            <Path Data="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"
+                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                  StrokeThickness="2"
+                  StrokeLineCap="Round" />
+          </Button>
+        </Grid>
+
+        <!-- live indicator -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="7" Margin="14,0,14,10">
+          <Ellipse Width="8" Height="8"
+                     VerticalAlignment="Center"
+                     Classes.online="{Binding IsConnected}"
+                     Classes.connecting="{Binding IsConnecting}" />
+          <TextBlock Classes="caption" Text="{Binding ConnectionStatus}" VerticalAlignment="Center" />
+        </StackPanel>
+
+        <!-- tabs -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,*" Margin="14,0,14,10">
+          <Button Grid.Column="0"
+                  Classes="tab"
+                  Classes.active="{Binding ShowChatsTab}"
+                  Command="{Binding ShowChatsCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock Text="Chats" />
+              <Border Classes="pill" IsVisible="{Binding HasUnread}">
+                <TextBlock Text="{Binding TotalUnread}" Foreground="White" FontSize="11" FontWeight="Bold" />
+              </Border>
+            </StackPanel>
+          </Button>
+
+          <Button Grid.Column="1"
+                  Classes="tab"
+                  Classes.active="{Binding ShowContactsTab}"
+                  Command="{Binding ShowContactsCommand}"
+                  Content="Contacts" />
+        </Grid>
+
+        <!-- error banner -->
+        <Border Grid.Row="2"
+                Margin="14,0,14,8"
+                VerticalAlignment="Bottom"
+                Background="#33241F1F"
+                BorderBrush="#59422D29"
+                BorderThickness="1"
+                CornerRadius="10"
+                Padding="10"
+                IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}">
+          <TextBlock Text="{Binding Error}" Foreground="#F0B6A8" TextWrapping="Wrap" FontSize="12" />
+        </Border>
+
+        <!-- ================= list ================= -->
+        <Panel Grid.Row="3">
+
+          <!-- conversations -->
+          <Grid IsVisible="{Binding ShowChatsTab}">
+            <ListBox Classes="plain"
+                     ItemsSource="{Binding Conversations}"
+                     SelectionMode="Single"
+                     SelectedItem="{Binding $parent[UserControl].((vm:ChatViewModel)DataContext).SelectedConversation, Mode=TwoWay}">
+              <ListBox.ItemTemplate>
+                <DataTemplate DataType="models:Conversation">
+                  <Border Classes="row" Classes.selected="{Binding $parent[ListBoxItem].IsSelected}">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="11">
+                      <controls:AvatarView Grid.Column="0"
+                                           Diameter="46"
+                                           DisplayName="{Binding Peer.DisplayName}"
+                                           AvatarUrl="{Binding Peer.AvatarUrl}"
+                                           UserId="{Binding Peer.Id}" />
+
+                      <Grid Grid.Column="1" RowDefinitions="Auto,Auto" RowSpacing="3">
+                        <Grid ColumnDefinitions="*,Auto">
+                          <TextBlock Grid.Column="0"
+                                     Text="{Binding Peer.DisplayName}"
+                                     FontWeight="SemiBold"
+                                     TextTrimming="CharacterEllipsis" />
+                          <TextBlock Grid.Column="1"
+                                     Classes="caption"
+                                     Text="{Binding LastMessage.CreatedAt, Converter={x:Static converters:UnixTimeConverter.Instance}}" />
+                        </Grid>
+
+                        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                          <TextBlock Grid.Column="0"
+                                     Text="{Binding LastMessage.Body}"
+                                     Classes="muted"
+                                     TextTrimming="CharacterEllipsis" />
+                          <Border Grid.Column="1"
+                                  Classes="pill"
+                                  IsVisible="{Binding UnreadCount, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <TextBlock Text="{Binding UnreadCount}"
+                                       Foreground="White"
+                                       FontSize="11"
+                                       FontWeight="Bold" />
+                          </Border>
+                        </Grid>
+                      </Grid>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+
+            <StackPanel VerticalAlignment="Center"
+                        HorizontalAlignment="Center"
+                        Spacing="12"
+                        IsVisible="{Binding !HasConversations}">
+              <TextBlock Classes="muted" Text="No conversations yet." />
+            </StackPanel>
+          </Grid>
+
+          <!-- contacts -->
+          <Grid IsVisible="{Binding ShowContactsTab}" RowDefinitions="Auto,*">
+            <Grid Grid.Row="0" Margin="12" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+              <TextBox Grid.Column="0" Text="{Binding NewContact}" Watermark="Add by username" />
+              <Button Grid.Column="1"
+                      Classes="primary slim"
+                      Content="Add"
+                      Command="{Binding AddContactCommand}" />
+            </Grid>
+
+            <ListBox Grid.Row="1"
+                     Classes="plain"
+                     ItemsSource="{Binding Contacts}"
+                     SelectionMode="Single"
+                     SelectedItem="{Binding $parent[UserControl].((vm:ChatViewModel)DataContext).SelectedContact, Mode=TwoWay}">
+              <ListBox.ItemTemplate>
+                <DataTemplate DataType="models:Contact">
+                  <Border Classes="row" Classes.selected="{Binding $parent[ListBoxItem].IsSelected}">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="11">
+                      <Panel Grid.Column="0" Width="46" Height="46">
+                        <controls:AvatarView Diameter="46"
+                                             DisplayName="{Binding DisplayName}"
+                                             AvatarUrl="{Binding AvatarUrl}"
+                                             UserId="{Binding Id}" />
+                        <Border Width="13" Height="13"
+                                CornerRadius="7"
+                                Background="{StaticResource OnlineBrush}"
+                                BorderBrush="{StaticResource ElevatedBrush}"
+                                BorderThickness="2"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Bottom"
+                                IsVisible="{Binding Online}" />
+                      </Panel>
+
+                      <Grid Grid.Column="1" RowDefinitions="Auto,Auto" RowSpacing="3" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding Username, StringFormat='@{0}'}" Classes="muted" />
+                      </Grid>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+
+            <TextBlock Grid.Row="1"
+                       Classes="muted"
+                       Text="No contacts yet. Add someone by username."
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       IsVisible="{Binding !HasContacts}" />
+          </Grid>
+        </Panel>
+      </Grid>
+    </Border>
+
+    <!-- ================= thread ================= -->
+    <Grid Grid.Column="1">
+      <Grid IsVisible="{Binding HasActiveConversation}" RowDefinitions="Auto,*,Auto">
+
+        <Border Grid.Row="0"
+                Background="{StaticResource ElevatedBrush}"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="0,0,0,1"
+                Padding="18,13">
+          <Grid ColumnDefinitions="Auto,*">
+            <controls:AvatarView Grid.Column="0"
+                                 Diameter="40"
+                                 DisplayName="{Binding PeerName}"
+                                 AvatarUrl="{Binding PeerAvatarUrl}"
+                                 UserId="{Binding PeerId}" />
+            <StackPanel Grid.Column="1" Margin="11,0,0,0" VerticalAlignment="Center" Spacing="1">
+              <TextBlock Text="{Binding PeerName}" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding PeerUsername, StringFormat='@{0}'}" Classes="caption" />
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <!-- messages -->
+        <Grid Grid.Row="1">
+          <ListBox Classes="plain"
+                   ItemsSource="{Binding Messages}"
+                   SelectionMode="Single"
+                   ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListBox.ItemsPanel>
+              <ItemsPanelTemplate>
+                <VirtualizingStackPanel Orientation="Vertical" />
+              </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+
+            <ListBox.ItemTemplate>
+              <DataTemplate DataType="vm:MessageItem">
+                <!--
+                  The first column always occupies avatar width: grouped
+                  messages hide the avatar but keep a spacer so the bubbles
+                  stay aligned down the thread.
+                -->
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="0,1">
+                  <Panel Grid.Column="0" Width="28" VerticalAlignment="Bottom">
+                    <controls:AvatarView Diameter="28"
+                                         DisplayName="{Binding SenderName}"
+                                         AvatarUrl="{Binding AvatarUrl}"
+                                         UserId="{Binding SenderId}"
+                                         IsVisible="{Binding ShowHeader}" />
+                  </Panel>
+
+                  <StackPanel Grid.Column="1" MaxWidth="560" Spacing="3" Classes.mine="{Binding IsMine}">
+                    <TextBlock Text="{Binding SenderName}"
+                               FontSize="11"
+                               Classes="muted"
+                               Margin="12,0,0,0"
+                               IsVisible="{Binding ShowHeader}" />
+
+                    <Border Classes="bubble" Classes.mine="{Binding IsMine}">
+                      <TextBlock Text="{Binding Body}" TextWrapping="Wrap" MaxWidth="520" />
+                    </Border>
+                  </StackPanel>
+
+                  <TextBlock Grid.Column="2"
+                             Classes="caption"
+                             FontSize="10"
+                             VerticalAlignment="Bottom"
+                             Margin="8,0,0,4"
+                             Text="{Binding Time}" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+
+          <!-- pending sends, appended after persisted messages -->
+          <ListBox Classes="plain"
+                   ItemsSource="{Binding Pending}"
+                   IsHitTestVisible="False"
+                   VerticalAlignment="Bottom"
+                   Margin="0,0,0,4">
+            <ListBox.ItemTemplate>
+              <DataTemplate DataType="vm:PendingItem">
+                <Grid ColumnDefinitions="Auto,Auto,Auto">
+                  <Border Grid.Column="0" Width="28" />
+                  <StackPanel Grid.Column="1" MaxWidth="560" Spacing="3" HorizontalAlignment="Right">
+                    <Border Classes="bubble mine pending">
+                      <TextBlock Text="{Binding Body}" TextWrapping="Wrap" MaxWidth="520" />
+                    </Border>
+                  </StackPanel>
+                  <TextBlock Grid.Column="2" Classes="caption" FontSize="10" Margin="8,0,0,4"
+                             VerticalAlignment="Bottom" Text="{Binding Time}" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+
+          <TextBlock Classes="muted"
+                     Text="No messages yet. Say hello."
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center"
+                     IsVisible="{Binding !HasMessages}" />
+
+          <Button Classes="link"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Top"
+                  Margin="0,10,0,0"
+                  Content="Load earlier messages"
+                  Command="{Binding LoadOlderCommand}"
+                  IsVisible="{Binding HasMoreHistory}" />
+
+          <!-- typing indicator -->
+          <StackPanel HorizontalAlignment="Left"
+                      VerticalAlignment="Bottom"
+                      Orientation="Horizontal"
+                      Spacing="8"
+                      Margin="18,0,0,8"
+                      IsVisible="{Binding PeerTyping}">
+            <TextBlock Classes="caption" VerticalAlignment="Center" Text="{Binding PeerTypingText}" />
+          </StackPanel>
+        </Grid>
+
+        <!-- composer -->
+        <Border Grid.Row="2"
+                Background="{StaticResource ElevatedBrush}"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="18,12">
+          <Grid RowDefinitions="Auto,Auto" RowSpacing="6">
+            <TextBlock Grid.Row="0"
+                       Foreground="{StaticResource DangerBrush}"
+                       FontSize="12"
+                       Text="{Binding SendError}"
+                       IsVisible="{Binding SendError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+            <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+              <TextBox Grid.Column="0"
+                       Text="{Binding Draft}"
+                       Watermark="Write a message…"
+                       AcceptsReturn="True"
+                       TextWrapping="Wrap"
+                       MaxHeight="120"
+                       KeyDown="OnComposerKeyDown" />
+
+              <Button Grid.Column="1"
+                      Classes="primary"
+                      Content="Send"
+                      VerticalAlignment="Bottom"
+                      Command="{Binding SendCommand}" />
+            </Grid>
+          </Grid>
+        </Border>
+      </Grid>
+
+      <!-- empty state -->
+      <StackPanel VerticalAlignment="Center"
+                  HorizontalAlignment="Center"
+                  Spacing="8"
+                  IsVisible="{Binding !HasActiveConversation}">
+        <TextBlock Text="&#64;" FontSize="44" Opacity="0.3" HorizontalAlignment="Center" />
+        <TextBlock FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Center"
+                   Text="{Binding WelcomeText}" />
+        <TextBlock Classes="muted" Text="Pick a conversation on the left, or add a contact to start one." />
+      </StackPanel>
+    </Grid>
+  </Grid>
+</UserControl>

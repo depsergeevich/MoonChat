@@ -1,0 +1,68 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MoonChat.Client.ViewModels"
+             xmlns:controls="using:MoonChat.Client.Controls"
+             x:Class="MoonChat.Client.Views.LoginView"
+             x:DataType="vm:LoginViewModel">
+
+  <Border Background="{StaticResource SurfaceBrush}">
+    <Border Width="400" VerticalAlignment="Center" HorizontalAlignment="Center" Classes="card" Padding="28">
+      <StackPanel Spacing="16">
+
+        <StackPanel Orientation="Horizontal" Spacing="14">
+          <Border Width="52" Height="52" CornerRadius="14" Background="{StaticResource AccentBrush}">
+            <TextBlock Text="{Binding LogoInitial}"
+                       Foreground="White"
+                       FontSize="22"
+                       FontWeight="SemiBold"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+          </Border>
+          <StackPanel VerticalAlignment="Center" Spacing="2">
+            <TextBlock Text="MoonChat" FontSize="20" FontWeight="SemiBold" />
+            <TextBlock Classes="muted" Text="{Binding Heading}" />
+          </StackPanel>
+        </StackPanel>
+
+        <Border Background="#33241F1F"
+                BorderBrush="#59422D29"
+                BorderThickness="1"
+                CornerRadius="10"
+                Padding="10,12"
+                IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}">
+          <TextBlock Text="{Binding Error}" Foreground="#F0B6A8" TextWrapping="Wrap" />
+        </Border>
+
+        <StackPanel Spacing="6">
+          <TextBlock Classes="caption" Text="Username" />
+          <TextBox Text="{Binding Username}" Watermark="e.g. ada" />
+        </StackPanel>
+
+        <StackPanel Spacing="6" IsVisible="{Binding IsDisplayNameVisible}">
+          <TextBlock Classes="caption" Text="Display name" />
+          <TextBox Text="{Binding DisplayName}" Watermark="Ada Lovelace" />
+        </StackPanel>
+
+        <StackPanel Spacing="6">
+          <TextBlock Classes="caption" Text="Password" />
+          <TextBox Text="{Binding Password}" PasswordChar="•" Watermark="at least 8 characters" />
+        </StackPanel>
+
+        <Button Classes="primary"
+                Content="{Binding SubmitLabel}"
+                Command="{Binding SignInCommand}"
+                IsVisible="{Binding IsIdle}" />
+
+        <Button Classes="primary"
+                Content="Please wait…"
+                IsEnabled="False"
+                IsVisible="{Binding IsBusy}" />
+
+        <Button Classes="link"
+                Content="{Binding SwitchLabel}"
+                Command="{Binding ToggleModeCommand}" />
+
+      </StackPanel>
+    </Border>
+  </Border>
+</UserControl>

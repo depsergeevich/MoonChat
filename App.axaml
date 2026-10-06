@@ -1,0 +1,274 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="MoonChat.Client.App"
+             RequestedThemeVariant="Dark">
+
+  <!-- ===================== resources ===================== -->
+  <Application.Resources>
+    <ResourceDictionary>
+
+      <!-- One dark surface set shared by every view. -->
+      <SolidColorBrush x:Key="SurfaceBrush" Color="#11141C" />
+      <SolidColorBrush x:Key="ElevatedBrush" Color="#171B26" />
+      <SolidColorBrush x:Key="InputBrush" Color="#1E2331" />
+      <SolidColorBrush x:Key="BorderBrush" Color="#262C3B" />
+      <SolidColorBrush x:Key="AccentBrush" Color="#5B8DEF" />
+      <SolidColorBrush x:Key="AccentStrongBrush" Color="#4A7AE0" />
+      <SolidColorBrush x:Key="DangerBrush" Color="#E2725B" />
+      <SolidColorBrush x:Key="OnlineBrush" Color="#3FB8A0" />
+      <SolidColorBrush x:Key="WarningBrush" Color="#D9A441" />
+      <SolidColorBrush x:Key="MutedBrush" Color="#8B93A7" />
+      <SolidColorBrush x:Key="TextBrush" Color="#E6E9F0" />
+      <SolidColorBrush x:Key="BubbleBrush" Color="#1E2331" />
+
+      <!--
+        Themes carry only setters and a template. Hover and disabled states
+        live in Application.Styles below, because a style nested inside a
+        ControlTheme has to use a nesting selector, and these targets are
+        single template parts.
+      -->
+
+      <ControlTheme x:Key="PrimaryButtonTheme" TargetType="Button">
+        <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Padding" Value="16,11" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Border x:Name="Root"
+                    Background="{TemplateBinding Background}"
+                    CornerRadius="10"
+                    Padding="{TemplateBinding Padding}">
+              <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                TextBlock.Foreground="{TemplateBinding Foreground}"
+                                TextBlock.FontWeight="{TemplateBinding FontWeight}"
+                                TextBlock.FontSize="{TemplateBinding FontSize}" />
+            </Border>
+          </ControlTemplate>
+        </Setter>
+      </ControlTheme>
+
+      <ControlTheme x:Key="LinkButtonTheme" TargetType="Button">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Padding" Value="8,4" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Border x:Name="Root" Background="Transparent" CornerRadius="8" Padding="{TemplateBinding Padding}">
+              <ContentPresenter HorizontalAlignment="Center"
+                                TextBlock.Foreground="{TemplateBinding Foreground}"
+                                TextBlock.FontSize="{TemplateBinding FontSize}" />
+            </Border>
+          </ControlTemplate>
+        </Setter>
+      </ControlTheme>
+
+      <ControlTheme x:Key="IconButtonTheme" TargetType="Button">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Padding" Value="7" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Border x:Name="Root"
+                    Background="{TemplateBinding Background}"
+                    CornerRadius="8"
+                    Padding="{TemplateBinding Padding}">
+              <ContentPresenter TextBlock.Foreground="{TemplateBinding Foreground}" />
+            </Border>
+          </ControlTemplate>
+        </Setter>
+      </ControlTheme>
+
+      <ControlTheme x:Key="TabButtonTheme" TargetType="Button">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Padding" Value="10,8" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Border x:Name="Root"
+                    Background="{TemplateBinding Background}"
+                    CornerRadius="9"
+                    Padding="{TemplateBinding Padding}">
+              <ContentPresenter HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                TextBlock.Foreground="{TemplateBinding Foreground}"
+                                TextBlock.FontWeight="{TemplateBinding FontWeight}"
+                                TextBlock.FontSize="{TemplateBinding FontSize}" />
+            </Border>
+          </ControlTemplate>
+        </Setter>
+      </ControlTheme>
+
+      <!-- Selection chrome is removed; rows style themselves. -->
+      <ControlTheme x:Key="PlainListItemTheme" TargetType="ListBoxItem">
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <ContentPresenter />
+          </ControlTemplate>
+        </Setter>
+      </ControlTheme>
+
+    </ResourceDictionary>
+  </Application.Resources>
+
+  <!-- ===================== styles ===================== -->
+  <Application.Styles>
+    <FluentTheme />
+
+    <Style Selector="TextBlock">
+      <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+      <Setter Property="FontSize" Value="14" />
+    </Style>
+
+    <Style Selector="TextBlock.muted">
+      <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+    </Style>
+
+    <Style Selector="TextBlock.caption">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+    </Style>
+
+    <!-- Presence dots. -->
+    <Style Selector="Ellipse">
+      <Setter Property="Fill" Value="{StaticResource MutedBrush}" />
+    </Style>
+
+    <Style Selector="Ellipse.online">
+      <Setter Property="Fill" Value="{StaticResource OnlineBrush}" />
+    </Style>
+
+    <Style Selector="Ellipse.connecting">
+      <Setter Property="Fill" Value="{StaticResource WarningBrush}" />
+    </Style>
+
+    <Style Selector="Button.primary">
+      <Setter Property="Theme" Value="{StaticResource PrimaryButtonTheme}" />
+    </Style>
+
+    <Style Selector="Button.primary.slim">
+      <Setter Property="Padding" Value="14,8" />
+      <Setter Property="FontSize" Value="13" />
+    </Style>
+
+    <Style Selector="Button.primary:pointerover /template/ Border#Root">
+      <Setter Property="Background" Value="{StaticResource AccentStrongBrush}" />
+    </Style>
+
+    <Style Selector="Button.primary:disabled /template/ Border#Root">
+      <Setter Property="Opacity" Value="0.5" />
+    </Style>
+
+    <Style Selector="Button.link">
+      <Setter Property="Theme" Value="{StaticResource LinkButtonTheme}" />
+    </Style>
+
+    <Style Selector="Button.link:pointerover">
+      <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+    </Style>
+
+    <Style Selector="Button.link:disabled /template/ Border#Root">
+      <Setter Property="Opacity" Value="0.5" />
+    </Style>
+
+    <Style Selector="Button.icon">
+      <Setter Property="Theme" Value="{StaticResource IconButtonTheme}" />
+    </Style>
+
+    <Style Selector="Button.icon:pointerover /template/ Border#Root">
+      <Setter Property="Background" Value="{StaticResource InputBrush}" />
+    </Style>
+
+    <Style Selector="Button.icon:pointerover">
+      <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+    </Style>
+
+    <Style Selector="Button.tab">
+      <Setter Property="Theme" Value="{StaticResource TabButtonTheme}" />
+    </Style>
+
+    <Style Selector="Button.tab:pointerover /template/ Border#Root">
+      <Setter Property="Background" Value="{StaticResource InputBrush}" />
+    </Style>
+
+    <Style Selector="Button.tab.active">
+      <Setter Property="Background" Value="{StaticResource InputBrush}" />
+      <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <Style Selector="TextBox">
+      <Setter Property="Background" Value="{StaticResource InputBrush}" />
+      <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="12,10" />
+      <Setter Property="CaretBrush" Value="{StaticResource TextBrush}" />
+    </Style>
+
+    <Style Selector="ListBoxItem">
+      <Setter Property="Theme" Value="{StaticResource PlainListItemTheme}" />
+    </Style>
+
+    <Style Selector="ListBox.plain">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+    </Style>
+
+    <Style Selector="Border.card">
+      <Setter Property="Background" Value="{StaticResource ElevatedBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="16" />
+    </Style>
+
+    <Style Selector="Border.row">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="CornerRadius" Value="11" />
+      <Setter Property="Padding" Value="10,9" />
+    </Style>
+
+    <Style Selector="Border.row:pointerover">
+      <Setter Property="Background" Value="{StaticResource InputBrush}" />
+    </Style>
+
+    <Style Selector="Border.row.selected">
+      <Setter Property="Background" Value="#26313F63" />
+    </Style>
+
+    <Style Selector="Border.bubble">
+      <Setter Property="Background" Value="{StaticResource BubbleBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="14" />
+      <Setter Property="Padding" Value="10,8" />
+    </Style>
+
+    <Style Selector="Border.bubble.mine">
+      <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    </Style>
+
+    <Style Selector="Border.bubble.pending">
+      <Setter Property="Opacity" Value="0.65" />
+    </Style>
+
+    <Style Selector="Border.pill">
+      <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+      <Setter Property="CornerRadius" Value="999" />
+      <Setter Property="Padding" Value="7,1" />
+    </Style>
+  </Application.Styles>
+</Application>
