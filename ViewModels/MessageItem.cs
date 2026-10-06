@@ -25,6 +25,7 @@ public sealed class MessageItem : ViewModelBase
 
     public ChatMessage Message { get; }
 
+    /// <summary>True for messages the signed-in user sent. Drives the accent colour.</summary>
     public bool IsMine { get; }
 
     public bool ShowHeader { get; }
@@ -34,8 +35,8 @@ public sealed class MessageItem : ViewModelBase
     public string Time => Message.Timestamp.ToLocalTime().ToString("HH:mm");
 
     /// <summary>
-    /// Own messages sit on the right, everything else on the left. Exposed as
-    /// an alignment so the view needs no triggers.
+    /// Own messages sit on the right, incoming ones on the left. Exposed as an
+    /// alignment so the view needs no triggers.
     /// </summary>
     public HorizontalAlignment BubbleAlignment =>
         IsMine ? HorizontalAlignment.Right : HorizontalAlignment.Left;

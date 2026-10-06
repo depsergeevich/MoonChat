@@ -245,8 +245,10 @@
               <DataTemplate DataType="vm:MessageItem">
                 <!--
                   Column 0 always reserves avatar width: grouped messages hide
-                  the avatar but keep the slot so bubbles stay aligned. The
-                  bubble hugs its text, with the timestamp right beside it.
+                  the avatar but keep the slot so bubbles stay aligned.
+                  The bubble column is a star so the bubble has room to align
+                  within it (right for mine, left for theirs) instead of just
+                  hugging its own text, which made both sides look identical.
                 -->
                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="0,1">
                   <Panel Grid.Column="0" Width="28" VerticalAlignment="Bottom">
@@ -257,27 +259,31 @@
                                          IsVisible="{Binding ShowHeader}" />
                   </Panel>
 
-                  <Grid Grid.Column="1" ColumnDefinitions="Auto,Auto" ColumnSpacing="8">
-                    <StackPanel Grid.Column="0" Spacing="3" MaxWidth="560">
-                      <TextBlock Text="{Binding SenderName}"
-                                 FontSize="11"
-                                 Classes="muted"
-                                 Margin="12,0,0,0"
-                                 IsVisible="{Binding ShowHeader}" />
+                  <StackPanel Grid.Column="1" Spacing="3">
+                    <TextBlock Text="{Binding SenderName}"
+                               FontSize="11"
+                               Classes="muted"
+                               Margin="12,0,0,0"
+                               IsVisible="{Binding ShowHeader}" />
 
+                    <!-- Bubble and timestamp travel together as one group, so the
+                         timestamp stays beside the bubble instead of drifting to
+                         the far edge of the thread. -->
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="8"
+                                HorizontalAlignment="{Binding BubbleAlignment}">
                       <Border Classes="bubble"
                               Classes.mine="{Binding IsMine}"
-                              HorizontalAlignment="{Binding BubbleAlignment}">
+                              MaxWidth="520">
                         <TextBlock Text="{Binding Body}" TextWrapping="Wrap" />
                       </Border>
-                    </StackPanel>
 
-                    <TextBlock Grid.Column="1"
-                               Classes="caption"
-                               FontSize="10"
-                               VerticalAlignment="Bottom"
-                               Text="{Binding Time}" />
-                  </Grid>
+                      <TextBlock Classes="caption"
+                                 FontSize="10"
+                                 VerticalAlignment="Bottom"
+                                 Text="{Binding Time}" />
+                    </StackPanel>
+                  </StackPanel>
                 </Grid>
               </DataTemplate>
               </ItemsControl.ItemTemplate>
@@ -293,14 +299,16 @@
               <DataTemplate DataType="vm:PendingItem">
                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
                   <Border Grid.Column="0" Width="28" />
-                  <Grid Grid.Column="1" ColumnDefinitions="Auto,Auto" ColumnSpacing="8"
-                        HorizontalAlignment="Right">
-                    <Border Grid.Column="0" Classes="bubble mine pending">
+                  <StackPanel Grid.Column="1"
+                              Orientation="Horizontal"
+                              Spacing="8"
+                              HorizontalAlignment="Right">
+                    <Border Classes="bubble mine pending" MaxWidth="520">
                       <TextBlock Text="{Binding Body}" TextWrapping="Wrap" />
                     </Border>
-                    <TextBlock Grid.Column="1" Classes="caption" FontSize="10"
+                    <TextBlock Classes="caption" FontSize="10"
                                VerticalAlignment="Bottom" Text="{Binding Time}" />
-                  </Grid>
+                  </StackPanel>
                 </Grid>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
