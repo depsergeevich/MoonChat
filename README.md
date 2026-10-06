@@ -155,4 +155,4 @@ notifications, avatar picker in the UI, and end-to-end encryption.
 
 ## License
 
-No license has been chosen yet. Add one before publishing this anywhere.
+This project is licensed under GNU AGPL 3.0
