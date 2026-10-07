@@ -24,5 +24,13 @@
     <Grid DataContext="{Binding}" IsVisible="{Binding ShowChat}">
       <views:ChatView DataContext="{Binding Chat}" />
     </Grid>
+
+    <!--
+      The account screen sits on top of the chat window rather than swapping
+      for it, so closing it leaves the open thread exactly as it was.
+    -->
+    <Grid DataContext="{Binding}" IsVisible="{Binding ShowProfileOverlay}">
+      <views:ProfileView DataContext="{Binding Profile}" />
+    </Grid>
   </Panel>
 </Window>

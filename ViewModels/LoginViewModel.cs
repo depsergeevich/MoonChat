@@ -19,6 +19,7 @@ public sealed class LoginViewModel : ViewModelBase
     private bool _isRegistering;
     private bool _busy;
     private string? _error;
+    private string? _sessionEndedText;
 
     public LoginViewModel(
         ApiClient api,
@@ -40,6 +41,13 @@ public sealed class LoginViewModel : ViewModelBase
                 "Close that window and sign in here.";
         }
 
+        SessionEndedText = _session.EndedReason;
+
+        // A session can end while the app is running: an expired token is only
+        // discovered when a request is rejected, which drops the session and
+        // brings the user back here.
+        _session.Changed += OnSessionChanged;
+
         SignInCommand = new RelayCommand(_ => SubmitAsync(), _ => CanSubmit);
         ToggleModeCommand = new RelayCommand(_ => ToggleMode());
     }
@@ -49,6 +57,18 @@ public sealed class LoginViewModel : ViewModelBase
     /// Null in the ordinary case.
     /// </summary>
     public string? SessionNotice { get; }
+
+    /// <summary>
+    /// Why the session ended mid-use, when the user did not ask for it. Null
+    /// after a deliberate sign-out, which needs no explanation.
+    /// </summary>
+    public string? SessionEndedText
+    {
+        get => _sessionEndedText;
+        private set => SetProperty(ref _sessionEndedText, value);
+    }
+
+    private void OnSessionChanged() => SessionEndedText = _session.IsSignedIn ? null : _session.EndedReason;
 
     /// <summary>Raised after a successful sign-in or registration.</summary>
     public Func<Task>? SignedIn { get; set; }

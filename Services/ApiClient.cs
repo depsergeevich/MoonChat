@@ -47,10 +47,82 @@ public sealed class ApiClient
         return result;
     }
 
-    public Task LogoutAsync()
+    /// <summary>
+    /// Revokes this device's token server-side, then drops it locally.
+    ///
+    /// The local clear happens even if the call fails: the user asked to sign
+    /// out, and a server that cannot be reached is not a reason to stay signed
+    /// in on this machine.
+    /// </summary>
+    public async Task LogoutAsync(CancellationToken ct = default)
     {
+        try
+        {
+            await SendAsync(HttpMethod.Post, "/api/auth/logout", null, ct);
+        }
+        catch (ApiException)
+        {
+            // Already invalid, or the server is gone. Either way, sign out here.
+        }
+        finally
+        {
+            _session.Clear();
+        }
+    }
+
+    /// <summary>Revokes every session for this account, on every device.</summary>
+    public async Task LogoutEverywhereAsync(CancellationToken ct = default)
+    {
+        await SendAsync(HttpMethod.Post, "/api/auth/logout-all", null, ct);
         _session.Clear();
-        return Task.CompletedTask;
+    }
+
+    public async Task<User> UpdateDisplayNameAsync(string displayName, CancellationToken ct = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Patch, "/api/users/me")
+        {
+            Content = JsonContent.Create(new { displayName }, options: JsonOptions),
+        };
+        var user = await SendAsync<User>(request, ct);
+
+        // Keep the cached profile in step so the sidebar updates without a restart.
+        await _session.SaveAsync(_session.Token, user);
+        return user;
+    }
+
+    /// <summary>
+    /// Changes the password, which signs every other device out.
+    ///
+    /// The server may answer with a freshly issued token because the old one is
+    /// invalidated by the change; when it does, the session is replaced so the
+    /// user is not bounced back to the sign-in screen they just used. A 204
+    /// answer simply leaves the existing token alone.
+    /// </summary>
+    public async Task<AuthResponse?> ChangePasswordAsync(string currentPassword, string newPassword, CancellationToken ct = default)
+    {
+        var result = await PostAsync<AuthResponse>("/api/users/me/password", new { currentPassword, newPassword }, ct);
+        if (result is not null && !string.IsNullOrEmpty(result.Token) && result.User is not null)
+        {
+            await _session.SaveAsync(result.Token, result.User);
+        }
+        return result;
+    }
+
+    public async Task DeleteAccountAsync(string password, CancellationToken ct = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Delete, "/api/users/me")
+        {
+            Content = JsonContent.Create(new { password }, options: JsonOptions),
+        };
+        await SendAsync(request, ct);
+        _session.Clear();
+    }
+
+    public async Task<User> DeleteAvatarAsync(CancellationToken ct = default)
+    {
+        var user = await SendAsync<User>(new HttpRequestMessage(HttpMethod.Delete, "/api/users/me/avatar"), ct);
+        await _session.SaveAsync(_session.Token, user);
+        return user;
     }
 
     public async Task<User> GetMeAsync(CancellationToken ct = default)
@@ -188,7 +260,7 @@ public sealed class ApiClient
         return result;
     }
 
-    private static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken ct)
+    private async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken ct)
     {
         if (response.IsSuccessStatusCode)
         {
@@ -206,10 +278,36 @@ public sealed class ApiClient
             // Fall through to the generic message below.
         }
 
+        var code = error?.Code ?? "http_" + (int)response.StatusCode;
+
+        if (IsSessionExpiry(code))
+        {
+            // The token is no longer good for anything. Ending the session here
+            // is what stops the UI limping along with a dead credential and
+            // showing "Could not reach the server" for every request that
+            // follows. Deliberately keyed on the error code and not the status:
+            // a wrong password on /api/auth/login and a wrong current password
+            // on the change-password call are also 401, and neither should
+            // throw the user out.
+            _session.Expire(
+                code switch
+                {
+                    "session_expired" => "Your session expired. Please sign in again.",
+                    _ => "You were signed out. Please sign in again.",
+                });
+        }
+
         throw new ApiException(
-            error?.Code ?? "http_" + (int)response.StatusCode,
+            code,
             error?.Message ?? $"Request failed with status {(int)response.StatusCode}.");
     }
+
+    /// <summary>
+    /// Error codes that mean "this token is dead", as opposed to "these
+    /// credentials are wrong".
+    /// </summary>
+    private static bool IsSessionExpiry(string code) =>
+        code is "unauthorized" or "session_expired" or "invalid_token";
 }
 
 /// <summary>An API failure with the server's machine-readable code.</summary>
@@ -222,6 +320,12 @@ public sealed class ApiException : Exception
 
     public string Code { get; }
 
-    /// <summary>True when the session is no longer valid and the user must sign in again.</summary>
-    public bool IsAuthFailure => Code is "unauthorized";
+    /// <summary>
+    /// True when the token itself was rejected, so the session must end. Wrong
+    /// passwords are <c>invalid_credentials</c> and deliberately excluded.
+    /// </summary>
+    public bool IsAuthFailure => Code is "unauthorized" or "session_expired" or "invalid_token";
+
+    /// <summary>True when the server is throttling this caller.</summary>
+    public bool IsRateLimited => Code == "rate_limited";
 }

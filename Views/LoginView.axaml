@@ -24,6 +24,17 @@
           </StackPanel>
         </StackPanel>
 
+        <Border Background="#33D9A441"
+                BorderBrush="#59D9A441"
+                BorderThickness="1"
+                CornerRadius="10"
+                Padding="10,12"
+                IsVisible="{Binding SessionEndedText, Converter={x:Static ObjectConverters.IsNotNull}}">
+          <TextBlock Text="{Binding SessionEndedText}"
+                     Foreground="{StaticResource WarningBrush}"
+                     TextWrapping="Wrap" />
+        </Border>
+
         <Border Background="#33B6A8F0"
                 BorderBrush="#595B8DEF"
                 BorderThickness="1"

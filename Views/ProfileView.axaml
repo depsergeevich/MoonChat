@@ -1,0 +1,152 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MoonChat.Client.ViewModels"
+             xmlns:controls="using:MoonChat.Client.Controls"
+             x:Class="MoonChat.Client.Views.ProfileView"
+             x:DataType="vm:ProfileViewModel">
+
+  <!--
+    Drawn over the chat window by MainWindow. The dimmed backdrop swallows the
+    click so the panel behaves like a modal without needing a separate window.
+  -->
+  <Grid>
+    <Border Background="#C0000000" />
+
+    <Border Width="520"
+            MaxHeight="720"
+            VerticalAlignment="Center"
+            HorizontalAlignment="Center"
+            Classes="card"
+            Background="{StaticResource ElevatedBrush}"
+            Padding="26">
+
+      <Panel>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="20">
+
+            <!-- header -->
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Grid.Column="0" Text="Your account" FontSize="19" FontWeight="SemiBold"
+                         VerticalAlignment="Center" />
+              <Button Grid.Column="1" Classes="icon" Command="{Binding CloseCommand}" ToolTip.Tip="Close">
+                <Path Data="M18 6 6 18M6 6l12 12"
+                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                      StrokeThickness="2"
+                      StrokeLineCap="Round" />
+              </Button>
+            </Grid>
+
+            <!-- photo -->
+            <StackPanel Spacing="12">
+              <Panel Width="96" Height="96" HorizontalAlignment="Center">
+                <controls:AvatarView Diameter="96"
+                                     DisplayName="{Binding DisplayName}"
+                                     AvatarUrl="{Binding AvatarUrl}"
+                                     UserId="{Binding UserId}" />
+              </Panel>
+
+              <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                <Button Classes="secondary"
+                        Content="Change photo"
+                        Command="{Binding ChoosePhotoCommand}" />
+                <Button Classes="link"
+                        Content="Remove photo"
+                        Command="{Binding RemovePhotoCommand}"
+                        IsVisible="{Binding HasAvatar}" />
+              </StackPanel>
+
+              <TextBlock Classes="caption"
+                         HorizontalAlignment="Center"
+                         Text="{Binding Username, StringFormat='@{0}'}" />
+            </StackPanel>
+
+            <!-- shared messages -->
+            <Border Background="#33B6A8F0"
+                    BorderBrush="#595B8DEF"
+                    BorderThickness="1"
+                    CornerRadius="10"
+                    Padding="10,12"
+                    IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}">
+              <TextBlock Text="{Binding Error}" Foreground="#F0B6A8" TextWrapping="Wrap" />
+            </Border>
+
+            <Border Background="#333FB8A0"
+                    BorderBrush="#593FB8A0"
+                    BorderThickness="1"
+                    CornerRadius="10"
+                    Padding="10,12"
+                    IsVisible="{Binding Status, Converter={x:Static ObjectConverters.IsNotNull}}">
+              <TextBlock Text="{Binding Status}" Foreground="{StaticResource OnlineBrush}" TextWrapping="Wrap" />
+            </Border>
+
+            <!-- display name -->
+            <StackPanel Spacing="6">
+              <TextBlock Classes="caption" Text="Display name" />
+              <TextBox Text="{Binding DisplayName}" Watermark="How others see you" />
+              <Button Classes="primary"
+                      Content="Save name"
+                      HorizontalAlignment="Right"
+                      Command="{Binding SaveNameCommand}" />
+            </StackPanel>
+
+            <!-- password -->
+            <StackPanel Spacing="6">
+              <TextBlock Text="Password" FontWeight="SemiBold" />
+              <TextBlock Classes="caption"
+                         Text="Changing it signs out every other device."
+                         TextWrapping="Wrap" />
+              <TextBox Text="{Binding CurrentPassword}" PasswordChar="•" Watermark="Current password" />
+              <TextBox Text="{Binding NewPassword}" PasswordChar="•" Watermark="New password, at least 8 characters" />
+              <TextBox Text="{Binding ConfirmPassword}" PasswordChar="•" Watermark="Repeat the new password" />
+              <Button Classes="primary"
+                      Content="Change password"
+                      HorizontalAlignment="Right"
+                      Command="{Binding ChangePasswordCommand}" />
+            </StackPanel>
+
+            <!-- sessions -->
+            <StackPanel Spacing="6">
+              <TextBlock Text="Sessions" FontWeight="SemiBold" />
+              <TextBlock Classes="caption"
+                         Text="Signs out every device, including this one."
+                         TextWrapping="Wrap" />
+              <Button Classes="secondary"
+                      Content="Sign out everywhere"
+                      HorizontalAlignment="Right"
+                      Command="{Binding SignOutEverywhereCommand}" />
+            </StackPanel>
+
+            <!-- danger zone -->
+            <StackPanel Spacing="6">
+              <TextBlock Text="Delete account" FontWeight="SemiBold" Foreground="{StaticResource DangerBrush}" />
+              <TextBlock Classes="caption"
+                         Text="Removes your messages, contacts and account. This cannot be undone."
+                         TextWrapping="Wrap" />
+
+              <StackPanel Spacing="8" IsVisible="{Binding !ConfirmingDelete}">
+                <Button Classes="secondary"
+                        Content="Delete my account"
+                        HorizontalAlignment="Right"
+                        Command="{Binding RequestDeleteCommand}" />
+              </StackPanel>
+
+              <StackPanel Spacing="8" IsVisible="{Binding ConfirmingDelete}">
+                <TextBox Text="{Binding DeletePassword}" PasswordChar="•" Watermark="Confirm with your password" />
+                <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+                  <Button Classes="link" Content="Cancel" Command="{Binding CancelDeleteCommand}" />
+                  <Button Classes="danger"
+                          Content="Delete permanently"
+                          Command="{Binding DeleteAccountCommand}" />
+                </StackPanel>
+              </StackPanel>
+            </StackPanel>
+
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- blocks interaction while a call is in flight -->
+        <Border Background="#66000000" IsVisible="{Binding IsBusy}" />
+      </Panel>
+    </Border>
+  </Grid>
+</UserControl>

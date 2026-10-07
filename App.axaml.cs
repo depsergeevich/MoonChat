@@ -41,9 +41,11 @@ public partial class App : Application
         services.AddSingleton<ApiClient>();
         services.AddSingleton<AvatarCache>();
         services.AddSingleton<ChatState>();
+        services.AddSingleton<IFilePicker, DesktopFilePicker>();
         services.AddSingleton<IDiagnostics, DiagnosticLog>();
         services.AddSingleton<LoginViewModel>();
         services.AddSingleton<ChatViewModel>();
+        services.AddSingleton<ProfileViewModel>();
         services.AddSingleton<MainWindowViewModel>();
 
         var provider = services.BuildServiceProvider();

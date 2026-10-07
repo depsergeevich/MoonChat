@@ -41,6 +41,10 @@ public sealed class ChatState : IAsyncDisposable
 
     private readonly Dictionary<long, List<ChatMessage>> _history = [];
 
+    // Newest message the *other* participant has read, per conversation. Only
+    // ever advances, so a late or duplicated receipt cannot walk it backwards.
+    private readonly Dictionary<long, long> _peerReadMessageId = [];
+
     // Conversations whose newest page has actually been fetched. The
     // conversation list seeds history with just the last message, so presence
     // in _history alone cannot mean "loaded".
@@ -57,6 +61,21 @@ public sealed class ChatState : IAsyncDisposable
         _api = api;
         _session = session;
         _log = log;
+
+        // A session can end without the user asking for it: an expired token is
+        // discovered mid-request and clears the session. Left alone the socket
+        // would keep reconnecting with a credential the server now rejects,
+        // spinning in the background until the app is closed.
+        _session.Changed += OnSessionEnded;
+    }
+
+    private void OnSessionEnded()
+    {
+        if (!_session.IsSignedIn && Status != RealtimeStatus.Disconnected)
+        {
+            _log.Info("session ended; closing the live connection");
+            _ = StopAsync();
+        }
     }
 
     public ObservableCollection<Conversation> Conversations { get; } = [];
@@ -88,6 +107,37 @@ public sealed class ChatState : IAsyncDisposable
 
     public Conversation? ActiveConversation
         => Conversations.FirstOrDefault(c => c.Id == ActiveConversationId);
+
+    /// <summary>
+    /// Newest message the other participant has acknowledged reading, or 0 when
+    /// nothing has been reported. Drives the "Seen" marker on own messages.
+    /// </summary>
+    public long PeerReadUpTo(long conversationId)
+        => _peerReadMessageId.TryGetValue(conversationId, out var id) ? id : 0;
+
+    /// <summary>
+    /// Records a receipt from the peer. Receipts for our own reads are ignored:
+    /// the server excludes the reader, but a stale client should not mark its
+    /// own messages as seen by the other side.
+    /// </summary>
+    private void ApplyReadReceipt(ReadReceiptPayload? receipt)
+    {
+        if (receipt is null || receipt.UserId == Me?.Id || receipt.MessageId <= 0)
+        {
+            return;
+        }
+
+        _log.Info($"peer read up to {receipt.MessageId} in conversation {receipt.ConversationId}");
+
+        OnUi(() =>
+        {
+            if (receipt.MessageId > PeerReadUpTo(receipt.ConversationId))
+            {
+                _peerReadMessageId[receipt.ConversationId] = receipt.MessageId;
+            }
+            Notify();
+        });
+    }
 
     // --- lifecycle ---
 
@@ -287,6 +337,10 @@ public sealed class ChatState : IAsyncDisposable
                     PeerTypingIn = typing.Typing ? typing.UserId : null;
                     Notify();
                 }
+                break;
+
+            case "read_receipt":
+                ApplyReadReceipt(envelope.Payload?.Deserialize<ReadReceiptPayload>(Json));
                 break;
 
             case "token_refresh":
@@ -779,6 +833,13 @@ public sealed class ChatState : IAsyncDisposable
             if (peer is not null)
             {
                 peer.LastSeenAt = presence.LastSeenAt;
+
+                // An offline frame carries no timestamp, so keep whatever we
+                // already know rather than reporting the peer as never seen.
+                if (presence.Online || presence.LastSeenAt > 0)
+                {
+                    peer.Online = presence.Online;
+                }
             }
 
             Notify();
@@ -851,6 +912,7 @@ public sealed class ChatState : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        _session.Changed -= OnSessionEnded;
         _lifetime?.Cancel();
         if (_pump is not null)
         {

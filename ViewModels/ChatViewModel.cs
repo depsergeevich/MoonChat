@@ -42,6 +42,7 @@ public sealed class ChatViewModel : ViewModelBase, IDisposable
         SignOutCommand = new RelayCommand(_ => SignOutAsync());
         ShowChatsCommand = new RelayCommand(_ => ShowContacts = false);
         ShowContactsCommand = new RelayCommand(_ => ShowContacts = true);
+        ShowProfileCommand = new RelayCommand(_ => OpenProfile?.Invoke());
 
         _state.Changed += OnStateChanged;
         SyncAll();
@@ -70,6 +71,11 @@ public sealed class ChatViewModel : ViewModelBase, IDisposable
     /// <summary>Raised after signing out so the shell can show the login view.</summary>
     public Func<Task>? SignedOut { get; set; }
 
+    /// <summary>Raised when the account button is pressed, so the shell can cover the chat.</summary>
+    public Action? OpenProfile { get; set; }
+
+    public RelayCommand ShowProfileCommand { get; }
+
     public ObservableCollection<Conversation> Conversations => _state.Conversations;
 
     public ObservableCollection<Contact> Contacts => _state.Contacts;
@@ -95,7 +101,10 @@ public sealed class ChatViewModel : ViewModelBase, IDisposable
                     nameof(HasActiveConversation),
                     nameof(ActiveConversationId),
                     nameof(PeerName),
-                    nameof(PeerUsername));
+                    nameof(PeerUsername),
+                    nameof(PeerOnline),
+                    nameof(PeerPresenceText),
+                    nameof(PeerSubtitle));
             }
         }
     }
@@ -108,6 +117,31 @@ public sealed class ChatViewModel : ViewModelBase, IDisposable
     public string PeerName => ActiveConversation?.Peer.DisplayName ?? "";
 
     public string PeerUsername => ActiveConversation?.Peer.Username ?? "";
+
+    /// <summary>
+    /// Whether the person in the open thread is connected right now. Distinct
+    /// from <see cref="IsConnected"/>, which is about *this* client's socket.
+    /// </summary>
+    public bool PeerOnline => ActiveConversation?.Peer.Online ?? false;
+
+    /// <summary>"Online", "Last seen 5m ago", or empty.</summary>
+    public string PeerPresenceText => ActiveConversation?.Peer.PresenceText ?? "";
+
+    /// <summary>Username plus presence, which is what the thread header shows.</summary>
+    public string PeerSubtitle
+    {
+        get
+        {
+            var handle = string.IsNullOrEmpty(PeerUsername) ? "" : "@" + PeerUsername;
+            if (!string.IsNullOrEmpty(PeerPresenceText))
+            {
+                return string.IsNullOrEmpty(handle)
+                    ? PeerPresenceText
+                    : $"{handle} · {PeerPresenceText}";
+            }
+            return handle;
+        }
+    }
 
     public string PeerAvatarUrl => ActiveConversation?.Peer.AvatarUrl ?? "";
 
@@ -260,6 +294,9 @@ public sealed class ChatViewModel : ViewModelBase, IDisposable
             nameof(HasConversations),
             nameof(HasContacts),
             nameof(PeerName),
+            nameof(PeerOnline),
+            nameof(PeerPresenceText),
+            nameof(PeerSubtitle),
             nameof(MeName));
 
         ConnectionStatus = _state.Status switch
@@ -283,7 +320,12 @@ public sealed class ChatViewModel : ViewModelBase, IDisposable
     {
         var messages = _state.ActiveMessages;
         var lastId = messages.Count > 0 ? messages[^1].Id : 0;
-        var signature = $"{_state.ActiveConversationId}:{messages.Count}:{lastId}";
+        var peerRead = _state.PeerReadUpTo(_state.ActiveConversationId);
+
+        // The peer-read cursor is part of the signature because a read receipt
+        // can arrive without the message set changing at all, and that receipt
+        // is what reveals the "Seen" marker.
+        var signature = $"{_state.ActiveConversationId}:{messages.Count}:{lastId}:{peerRead}";
         if (signature == _messagesSignature)
         {
             return;
@@ -292,10 +334,14 @@ public sealed class ChatViewModel : ViewModelBase, IDisposable
 
         Messages.Clear();
 
+        // Only the newest of my own messages can carry the marker.
+        var newestMine = messages.LastOrDefault(m => m.SenderId == MeId)?.Id ?? 0;
+
         ChatMessage? previous = null;
         foreach (var message in messages)
         {
-            Messages.Add(new MessageItem(message, MeId, previous));
+            var seen = message.SenderId == MeId && message.Id == newestMine && message.Id <= peerRead;
+            Messages.Add(new MessageItem(message, MeId, previous, seen));
             previous = message;
         }
 

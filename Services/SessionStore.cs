@@ -45,6 +45,12 @@ public sealed class SessionStore
     public event Action? Changed;
 
     /// <summary>
+    /// Why the session ended, when it was not the user asking. The sign-in
+    /// screen shows this instead of appearing with no explanation.
+    /// </summary>
+    public string? EndedReason { get; private set; }
+
+    /// <summary>
     /// Reads a previously saved session, if any.
     ///
     /// Deliberately synchronous: this runs during start-up before Avalonia's
@@ -106,6 +112,7 @@ public sealed class SessionStore
         {
             Token = token;
             User = user;
+            EndedReason = null;
 
             var dir = Path.GetDirectoryName(_path)!;
             Directory.CreateDirectory(dir);
@@ -144,6 +151,19 @@ public sealed class SessionStore
         {
             _ = SaveAsync(Token, User!);
         }
+    }
+
+    /// <summary>
+    /// Drops the session because the server rejected the token, recording why so
+    /// the sign-in screen can explain itself.
+    ///
+    /// The cached file goes too: the token is worthless now, and leaving it
+    /// behind would bounce the next launch straight back into a failed session.
+    /// </summary>
+    public void Expire(string reason)
+    {
+        EndedReason = reason;
+        Clear();
     }
 
     public void Clear()

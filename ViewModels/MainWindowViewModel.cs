@@ -14,11 +14,13 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
     private readonly IDiagnostics _log;
 
     private bool _isAuthenticated;
+    private bool _showProfile;
 
     public MainWindowViewModel(
         ChatState chat,
         LoginViewModel login,
         ChatViewModel chatView,
+        ProfileViewModel profile,
         SessionStore session,
         IDiagnostics log)
     {
@@ -28,9 +30,12 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
 
         Login = login;
         Chat = chatView;
+        Profile = profile;
 
         Login.SignedIn = StartChatAsync;
         Chat.SignedOut = SignOutAsync;
+        Chat.OpenProfile = () => ShowProfile = true;
+        Profile.Closed = CloseProfile;
         _session.Changed += OnSessionChanged;
 
         _isAuthenticated = _session.IsSignedIn;
@@ -39,6 +44,28 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
     public LoginViewModel Login { get; }
 
     public ChatViewModel Chat { get; }
+
+    public ProfileViewModel Profile { get; }
+
+    /// <summary>
+    /// The account screen covers the chat window rather than replacing it, so
+    /// coming back does not lose which thread was open.
+    /// </summary>
+    public bool ShowProfile
+    {
+        get => _showProfile;
+        set
+        {
+            if (SetProperty(ref _showProfile, value))
+            {
+                OnPropertiesChanged(nameof(ShowProfileOverlay));
+            }
+        }
+    }
+
+    public bool ShowProfileOverlay => IsAuthenticated && ShowProfile;
+
+    private void CloseProfile() => ShowProfile = false;
 
     public bool IsAuthenticated
     {
@@ -70,7 +97,7 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
         }
 
         IsAuthenticated = _session.IsSignedIn;
-        OnPropertiesChanged(nameof(ShowLogin), nameof(ShowChat));
+        OnPropertiesChanged(nameof(ShowLogin), nameof(ShowChat), nameof(ShowProfileOverlay));
 
         if (IsAuthenticated)
         {

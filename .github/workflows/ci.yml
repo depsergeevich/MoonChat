@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+# A new push to the same branch makes any in-flight run pointless.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  build:
+    # The client is a Windows-first Avalonia app and ships an app.manifest, so
+    # it only builds and runs on Windows.
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      # This GitHub repository is the client/ folder, but the same tree is also
+      # built from the parent folder (which holds MoonChat.slnx and tools/).
+      # Resolve which layout we got so the same workflow works in both.
+      - name: Resolve project paths
+        shell: pwsh
+        run: |
+          if (Test-Path 'MoonChat.slnx') {
+            'SOLUTION=MoonChat.slnx'            | Out-File -FilePath $env:GITHUB_ENV -Append
+            'CLIENT=MoonChat.Client.csproj'     | Out-File -FilePath $env:GITHUB_ENV -Append
+            'TESTS=client/tests/MoonChat.Client.Tests' | Out-File -FilePath $env:GITHUB_ENV -Append
+          }
+          else {
+            'CLIENT=MoonChat.Client.csproj'     | Out-File -FilePath $env:GITHUB_ENV -Append
+            'TESTS=tests/MoonChat.Client.Tests' | Out-File -FilePath $env:GITHUB_ENV -Append
+          }
+
+      # client/NuGet.config pins the HTTPS feed and clears inherited sources, so
+      # restore stays deterministic regardless of the runner image.
+      - name: Restore
+        shell: pwsh
+        run: dotnet restore $env:CLIENT
+
+      - name: Build
+        shell: pwsh
+        run: dotnet build $env:CLIENT -c Release --no-restore --nologo
+
+      - name: Test
+        shell: pwsh
+        run: dotnet test $env:TESTS -c Release --no-build --nologo
+
+  # Proves the shipping artefact still publishes. A self-contained single-file
+  # Avalonia build can break in ways a plain build never surfaces.
+  publish:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      # Mirrors tools/publish.ps1, which lives outside this repository.
+      # PublishTrimmed must stay false: Avalonia resolves types reflectively at
+      # runtime and a trimmed build only fails once it is running.
+      - name: Publish
+        shell: pwsh
+        run: |
+          dotnet publish MoonChat.Client.csproj `
+            -c Release -r win-x64 --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:PublishTrimmed=false `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:DebugType=none `
+            -o "${{ runner.temp }}\moonchat-publish" `
+            --nologo
+
+      - name: Verify artefact
+        shell: pwsh
+        run: |
+          $exe = Join-Path "${{ runner.temp }}\moonchat-publish" 'MoonChat.exe'
+          if (-not (Test-Path $exe)) { throw "MoonChat.exe was not produced." }
+          '{0:N1} MB' -f ((Get-Item $exe).Length / 1MB) | Write-Host
+
+      - name: Upload artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MoonChat-windows-x64
+          path: ${{ runner.temp }}\moonchat-publish/MoonChat.exe
+          if-no-files-found: error

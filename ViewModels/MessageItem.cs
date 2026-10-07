@@ -9,10 +9,11 @@ namespace MoonChat.Client.ViewModels;
 /// </summary>
 public sealed class MessageItem : ViewModelBase
 {
-    public MessageItem(ChatMessage message, long myUserId, ChatMessage? previous)
+    public MessageItem(ChatMessage message, long myUserId, ChatMessage? previous, bool seen = false)
     {
         Message = message;
         IsMine = message.SenderId == myUserId;
+        Seen = seen;
 
         // Consecutive messages from one sender within a few minutes share an
         // avatar and name header.
@@ -29,6 +30,12 @@ public sealed class MessageItem : ViewModelBase
     public bool IsMine { get; }
 
     public bool ShowHeader { get; }
+
+    /// <summary>
+    /// Set on the newest own message once the peer has read up to it. Off for
+    /// everything else: repeating "Seen" down the thread would be noise.
+    /// </summary>
+    public bool Seen { get; }
 
     public string Body => Message.Body;
 
